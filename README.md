@@ -23,6 +23,8 @@ The macOS app stores runtime data in:
 ~/Library/Application Support/G Play
 ```
 
+For YouTube cookies in the macOS app, place `cookies.txt` in that same folder.
+
 ## Ports
 - Docker (single port): `9137`
 - Vite dev server (optional): `5176`
@@ -42,7 +44,17 @@ Bind mounts are enabled in `docker-compose.yml`:
 - `./playlists` -> `/app/playlists`
 - `./logs` -> `/app/logs`
 
-Do not commit cookies. If YouTube requires cookies, keep a local cookie file outside git and pass it through your own compose override or shell environment.
+### YouTube Cookies
+
+YouTube pulls often need cookies. Keep your local `cookies.txt` in this folder, but do not commit it. It is ignored by git. The file must exist before you use the cookie override.
+
+Run Docker with the cookie override:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.cookies.yml up --build
+```
+
+That mounts local `./cookies.txt` at `/app/cookies.txt` and sets `GPLAY_YTDLP_COOKIES=/app/cookies.txt` inside the container.
 
 ## Local dev (optional)
 Backend:

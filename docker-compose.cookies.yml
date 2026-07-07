@@ -1,0 +1,11 @@
+services:
+  gplay:
+    environment:
+      - GPLAY_YTDLP_COOKIES=/app/cookies.txt
+    volumes:
+      - type: bind
+        source: ./cookies.txt
+        target: /app/cookies.txt
+        read_only: true
+        bind:
+          create_host_path: false
