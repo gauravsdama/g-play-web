@@ -1,26 +1,23 @@
-# PART A — RESTARTING THE WEB APP (Browser)
+# Starting G Play on macOS
 
-### Step A1: Open Finder
+## Build the app
 
-- Click the **Finder** icon (smiley face) in the Dock
+Open Terminal in this folder and run:
 
-### Step A2: Navigate to the web app folder
+```bash
+./macos/scripts/build_app.sh
+```
 
-### Step A3: Open Terminal in this folder
+## Open the app
 
-- Right-click **inside the folder**
-- Click **“Open in Terminal”**
+```bash
+open "./.build/macos/G Play.app"
+```
 
-A black Terminal window will open.
+## Stop the backend-only Docker runtime
 
-### Step A4: Start the web app
+If you used Docker for backend development:
 
-Type:
-colima start
-docker version
-
-docker-compose up -d
-
-to close
-docker-compose down
-colima stop
+```bash
+docker compose down
+```

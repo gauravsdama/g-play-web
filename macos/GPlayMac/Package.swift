@@ -15,7 +15,7 @@ let package = Package(
             name: "GPlayMac",
             linkerSettings: [
                 .linkedFramework("AppKit"),
-                .linkedFramework("WebKit"),
+                .linkedFramework("AVFoundation"),
             ]
         ),
     ],

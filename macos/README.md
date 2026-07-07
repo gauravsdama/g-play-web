@@ -1,13 +1,12 @@
 # G Play for macOS
 
-This folder packages the existing React + FastAPI app as a local native macOS app.
+This folder packages G Play as a native SwiftUI macOS app backed by the local FastAPI audio engine.
 
 The current architecture is:
 
 - SwiftUI app shell
-- WKWebView for the G Play interface
+- native SwiftUI navigation, library, player, download, playlist, tuning, and visualizer views
 - bundled FastAPI backend launched as a child process
-- Vite production build copied into `backend/app/static`
 - user data stored in `~/Library/Application Support/G Play`
 
 ## Build

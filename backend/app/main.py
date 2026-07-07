@@ -19,7 +19,6 @@ import sys
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from yt_dlp import YoutubeDL
 
@@ -28,8 +27,6 @@ LIBRARY_DIR = Path(os.environ.get("GPLAY_LIBRARY_DIR", BASE_DIR / "library"))
 EDITS_DIR = Path(os.environ.get("GPLAY_EDITED_DIR", BASE_DIR / "edited"))
 PLAYLISTS_DIR = Path(os.environ.get("GPLAY_PLAYLISTS_DIR", BASE_DIR / "playlists"))
 LOGS_DIR = Path(os.environ.get("GPLAY_LOGS_DIR", BASE_DIR / "logs"))
-STATIC_DIR = BASE_DIR / "backend" / "app" / "static"
-
 PARTY_STATE: Dict[str, Any] = {"code": None, "queue": []}
 PARTY_LOCK = threading.Lock()
 PARTY_SEQ = 0
@@ -1420,7 +1417,3 @@ async def open_folder_endpoint(req: OpenFolderRequest) -> Dict[str, Any]:
 async def unhandled_exception_handler(request: Request, exc: Exception):
     log_error("unhandled_exception", path=request.url.path, error=str(exc))
     return JSONResponse(status_code=500, content={"detail": "Server error"})
-
-
-if STATIC_DIR.exists():
-    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")

@@ -8,7 +8,6 @@ APP_BUILD_DIR="$ROOT_DIR/.build/macos"
 APP_BUNDLE="$APP_BUILD_DIR/G Play.app"
 CONTENTS_DIR="$APP_BUNDLE/Contents"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
-FRONTEND_DIR="$ROOT_DIR/frontend"
 BACKEND_DIR="$ROOT_DIR/backend"
 PYTHON_BIN="${PYTHON_BIN:-}"
 
@@ -23,14 +22,6 @@ if [[ -z "$PYTHON_BIN" ]]; then
   fi
 fi
 
-echo "==> Building frontend"
-pushd "$FRONTEND_DIR" >/dev/null
-if [[ ! -d node_modules ]]; then
-  npm ci
-fi
-npm run build
-popd >/dev/null
-
 echo "==> Building native shell"
 swift build -c release --package-path "$SWIFT_PACKAGE_DIR"
 
@@ -43,10 +34,6 @@ cp "$MACOS_DIR/Info.plist" "$CONTENTS_DIR/Info.plist"
 rsync -a --delete \
   --exclude '__pycache__' \
   "$BACKEND_DIR/" "$RESOURCES_DIR/backend/"
-
-rm -rf "$RESOURCES_DIR/backend/app/static"
-mkdir -p "$RESOURCES_DIR/backend/app/static"
-rsync -a --delete "$FRONTEND_DIR/dist/" "$RESOURCES_DIR/backend/app/static/"
 
 echo "==> Creating bundled Python environment"
 "$PYTHON_BIN" -m venv "$RESOURCES_DIR/venv"
