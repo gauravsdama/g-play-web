@@ -1,0 +1,15 @@
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.venv
+**/node_modules
+**/dist
+**/.DS_Store
+**/.git
+cookies*.txt
+logs
+library
+edited
+playlists
+.build
+.macness

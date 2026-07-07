@@ -1,0 +1,12 @@
+services:
+  gplay:
+    build: .
+    ports:
+      - "9137:9137"
+    environment:
+      - PORT=9137
+    volumes:
+      - ./library:/app/library
+      - ./edited:/app/edited
+      - ./playlists:/app/playlists
+      - ./logs:/app/logs

@@ -1,0 +1,20 @@
+.DS_Store
+.build/
+**/.build/
+.macness/
+backend/.venv/
+frontend/node_modules/
+frontend/dist/
+__pycache__/
+*.pyc
+
+# Local runtime data. Keep the folders, never commit the contents.
+cookies*.txt
+logs/*
+!logs/.gitkeep
+library/*
+!library/.gitkeep
+edited/*
+!edited/.gitkeep
+playlists/*
+!playlists/.gitkeep
