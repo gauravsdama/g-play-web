@@ -1,23 +1,19 @@
-# Starting G Play on macOS
+# Starting vantabeat on macOS
 
-## Build the app
-
-Open Terminal in this folder and run:
+Build the app:
 
 ```bash
 ./macos/scripts/build_app.sh
 ```
 
-## Open the app
+Open it:
 
 ```bash
-open "./.build/macos/G Play.app"
+open "./.build/macos/vantabeat.app"
 ```
 
-## Stop the backend-only Docker runtime
-
-If you used Docker for backend development:
+Your local library, rendered tracks, playlists, logs, and optional `cookies.txt` live in:
 
 ```bash
-docker compose down
+~/Library/Application Support/vantabeat
 ```

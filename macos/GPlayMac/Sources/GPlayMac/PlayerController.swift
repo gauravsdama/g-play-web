@@ -8,6 +8,7 @@ final class PlayerController: ObservableObject {
     @Published var currentTime: Double = 0
     @Published var duration: Double = 0
     @Published var queue: [Track] = []
+    @Published var history: [Track] = []
 
     private let api: GPlayAPI
     private let player = AVPlayer()
@@ -22,13 +23,25 @@ final class PlayerController: ObservableObject {
         }
     }
 
-    func play(_ track: Track) {
+    func play(_ track: Track, fromHistory: Bool = false) {
+        if let currentTrack, currentTrack.id != track.id, !fromHistory {
+            history.append(currentTrack)
+        }
         currentTrack = track
         currentTime = 0
         duration = 0
         player.replaceCurrentItem(with: AVPlayerItem(url: api.fileURL(for: track)))
         player.play()
         isPlaying = true
+    }
+
+    func stop() {
+        player.pause()
+        player.replaceCurrentItem(with: nil)
+        currentTrack = nil
+        currentTime = 0
+        duration = 0
+        isPlaying = false
     }
 
     func toggle() {
@@ -60,12 +73,30 @@ final class PlayerController: ObservableObject {
         play(next)
     }
 
+    func skipBack() {
+        guard currentTrack != nil else {
+            return
+        }
+        if currentTime > 2 {
+            seek(to: 0)
+            return
+        }
+        guard let previous = history.popLast() else {
+            seek(to: 0)
+            return
+        }
+        play(previous, fromHistory: true)
+    }
+
     func clearQueue() {
         queue.removeAll()
     }
 
-    func removeFromQueue(_ track: Track) {
-        queue.removeAll { $0.id == track.id }
+    func removeFromQueue(at index: Int) {
+        guard queue.indices.contains(index) else {
+            return
+        }
+        queue.remove(at: index)
     }
 
     func seek(to seconds: Double) {

@@ -6,7 +6,7 @@ struct GPlayApp: App {
     @StateObject private var model = AppModel()
 
     var body: some Scene {
-        WindowGroup("G Play") {
+        WindowGroup("vantabeat") {
             RootView()
                 .environmentObject(model)
                 .task {
@@ -16,7 +16,7 @@ struct GPlayApp: App {
         .windowStyle(.titleBar)
         .commands {
             CommandGroup(after: .appInfo) {
-                Button("Open G Play Data Folder") {
+                Button("Open vantabeat Data Folder") {
                     model.openDataFolder()
                 }
                 .keyboardShortcut("o", modifiers: [.command, .shift])
@@ -36,7 +36,7 @@ struct GPlayApp: App {
 final class AppModel: ObservableObject {
     enum State: Equatable {
         case starting
-        case ready(URL)
+        case ready(URL, String)
         case failed(String)
     }
 
@@ -77,7 +77,7 @@ final class AppModel: ObservableObject {
             let launch = try backend.start()
             dataRootURL = launch.dataRootURL
             try await waitForBackend(at: launch.baseURL)
-            state = .ready(launch.baseURL)
+            state = .ready(launch.baseURL, launch.apiToken)
         } catch {
             state = .failed(error.localizedDescription)
         }

@@ -1,10 +1,11 @@
 services:
-  gplay:
+  vantabeat:
     build: .
     ports:
       - "9137:9137"
     environment:
       - PORT=9137
+      - VANTABEAT_API_TOKEN=dev-local-token
     volumes:
       - ./library:/app/library
       - ./edited:/app/edited

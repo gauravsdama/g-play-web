@@ -8,9 +8,9 @@ struct RootView: View {
         ZStack {
             switch model.state {
             case .starting:
-                StartupView(message: "Starting G Play")
-            case .ready(let url):
-                NativeAppView(baseURL: url, dataRootURL: model.dataRootURL)
+                StartupView(message: "Starting vantabeat")
+            case .ready(let url, let apiToken):
+                NativeAppView(baseURL: url, apiToken: apiToken, dataRootURL: model.dataRootURL)
             case .failed(let message):
                 FailureView(message: message)
             }
@@ -68,7 +68,7 @@ struct FailureView: View {
                 .font(.system(size: 42, weight: .regular))
                 .foregroundStyle(.orange)
                 .accessibilityHidden(true)
-            Text("G Play could not start")
+            Text("vantabeat could not start")
                 .font(.title2.weight(.semibold))
             Text(message)
                 .font(.body)

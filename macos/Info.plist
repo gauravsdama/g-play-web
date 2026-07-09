@@ -5,15 +5,15 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>
-	<string>GPlayMac</string>
+	<string>vantabeat</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.gauravsdama.gplay</string>
+	<string>com.gauravsdama.vantabeat</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>G Play</string>
+	<string>vantabeat</string>
 	<key>CFBundleDisplayName</key>
-	<string>G Play</string>
+	<string>vantabeat</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

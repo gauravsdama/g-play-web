@@ -1,6 +1,12 @@
-# G Play
+# vantabeat
 
-G Play is a native SwiftUI macOS music app backed by a local FastAPI audio engine. The macOS app owns the interface, launches the Python backend as a child process, and stores runtime data outside the repo in `~/Library/Application Support/G Play`.
+vantabeat is a local macOS music studio for playback, imports, EQ rendering, and reactive visuals. The SwiftUI app owns the user interface and launches a bundled Python media engine as a private child process.
+
+Runtime data lives outside the repo by default:
+
+```bash
+~/Library/Application Support/vantabeat
+```
 
 ## macOS App
 
@@ -13,7 +19,7 @@ Build the app bundle:
 Run it:
 
 ```bash
-open "./.build/macos/G Play.app"
+open "./.build/macos/vantabeat.app"
 ```
 
 Verify it with `macness`:
@@ -24,40 +30,42 @@ Verify it with `macness`:
 
 ## Runtime Data
 
-The native app stores local music, edited audio, playlists, logs, and optional YouTube cookies here:
+The app stores local music, rendered tracks, playlists, logs, and optional YouTube cookies in:
 
 ```bash
-~/Library/Application Support/G Play
+~/Library/Application Support/vantabeat
 ```
 
-For YouTube downloads that need cookies, place `cookies.txt` in that folder. Do not commit cookies, songs, sidecar metadata, logs, or generated app bundles.
+For YouTube imports that need cookies, place `cookies.txt` in that folder. Do not commit cookies, songs, sidecar metadata, logs, or generated app bundles.
 
-## Backend Dev Container
+Supported local audio containers include `.aac`, `.m4a`, `.mp3`, `.flac`, `.wav`, `.ogg`, `.opus`, and `.webm`.
 
-Docker is kept as a backend-only development runtime:
+## Development Media Engine
+
+Docker is kept as a development-only runtime for the local media engine:
 
 ```bash
 docker compose up --build
 ```
 
-The API listens on `http://localhost:9137`.
+The API listens on `http://localhost:9137` and expects the dev token from `docker-compose.yml`.
 
-YouTube cookies are opt-in through the ignored local override:
+For YouTube cookies in Docker:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.cookies.yml up --build
 ```
 
-That mounts local `./cookies.txt` at `/app/cookies.txt` and sets `GPLAY_YTDLP_COOKIES=/app/cookies.txt` inside the container.
+That mounts local `./cookies.txt` at `/app/cookies.txt` and sets `VANTABEAT_YTDLP_COOKIES=/app/cookies.txt` inside the container.
 
-## Local Backend Development
+## Local Engine Development
 
 ```bash
 cd backend
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 9137
+VANTABEAT_API_TOKEN=dev-local-token uvicorn app.main:app --reload --port 9137
 ```
 
-Runtime folders, cookies, generated app bundles, virtualenvs, and dependency folders are ignored by git.
+Runtime folders, cookies, generated app bundles, virtualenvs, dependency folders, and verification artifacts are ignored by git.

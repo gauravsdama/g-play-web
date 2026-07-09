@@ -8,6 +8,15 @@ struct LibraryView: View {
             if left.isDirectory != right.isDirectory {
                 return left.isDirectory
             }
+            if left.isDirectory {
+                return left.name.localizedStandardCompare(right.name) == .orderedAscending
+            }
+            switch store.librarySort {
+            case .recent:
+                return (left.addedAt ?? 0) > (right.addedAt ?? 0)
+            case .name:
+                break
+            }
             return left.name.localizedStandardCompare(right.name) == .orderedAscending
         }
     }
@@ -23,6 +32,12 @@ struct LibraryView: View {
                         Label(store.selectedRoot.title, systemImage: store.selectedRoot.symbol)
                             .font(.headline)
                         Spacer()
+                        Picker("Sort", selection: $store.librarySort) {
+                            ForEach(LibrarySort.allCases) { sort in
+                                Text(sort.title).tag(sort)
+                            }
+                        }
+                        .frame(width: 150)
                         Text("\(sortedEntries.count) items")
                             .font(.callout)
                             .foregroundStyle(.secondary)
@@ -37,17 +52,34 @@ struct LibraryView: View {
                     } else {
                         LazyVStack(spacing: 8) {
                             ForEach(sortedEntries) { entry in
-                                LibraryRow(entry: entry, root: store.selectedRoot) {
-                                    if entry.isDirectory {
-                                        Task { await store.openPath(entry.path) }
-                                    } else {
-                                        store.select(entry.track(root: store.selectedRoot))
+                                LibraryRow(
+                                    entry: entry,
+                                    root: store.selectedRoot,
+                                    open: {
+                                        if entry.isDirectory {
+                                            Task { await store.openPath(entry.path) }
+                                        } else {
+                                            store.select(entry.track(root: store.selectedRoot))
+                                        }
+                                    },
+                                    play: {
+                                        store.playEntry(entry)
+                                    },
+                                    queue: {
+                                        store.player.addToQueue(entry.track(root: store.selectedRoot))
+                                    },
+                                    openInFinder: {
+                                        Task { await store.openFolder(root: store.selectedRoot, path: entry.path) }
+                                    },
+                                    saveToLibrary: entry.isDirectory || store.selectedRoot != .edited ? nil : {
+                                        let task = Task { await store.saveToLibrary(track: entry.track(root: store.selectedRoot)) }
+                                        _ = task
+                                    },
+                                    delete: entry.isDirectory || (store.selectedRoot != .library && store.selectedRoot != .edited) ? nil : {
+                                        let task = Task { await store.delete(track: entry.track(root: store.selectedRoot)) }
+                                        _ = task
                                     }
-                                } play: {
-                                    store.playEntry(entry)
-                                } queue: {
-                                    store.player.addToQueue(entry.track(root: store.selectedRoot))
-                                }
+                                )
                             }
                         }
                     }
@@ -119,57 +151,136 @@ struct LibraryRow: View {
     let open: () -> Void
     let play: () -> Void
     let queue: () -> Void
+    let openInFinder: (() -> Void)?
+    let saveToLibrary: (() -> Void)?
+    let delete: (() -> Void)?
+
+    init(
+        entry: TreeEntry,
+        root: RootName,
+        open: @escaping () -> Void,
+        play: @escaping () -> Void,
+        queue: @escaping () -> Void,
+        openInFinder: (() -> Void)? = nil,
+        saveToLibrary: (() -> Void)? = nil,
+        delete: (() -> Void)? = nil
+    ) {
+        self.entry = entry
+        self.root = root
+        self.open = open
+        self.play = play
+        self.queue = queue
+        self.openInFinder = openInFinder
+        self.saveToLibrary = saveToLibrary
+        self.delete = delete
+    }
 
     var body: some View {
-        Button(action: open) {
-            HStack(spacing: 13) {
-                if entry.isDirectory {
-                    FolderTile()
-                } else {
-                    ArtworkView(track: entry.track(root: root), size: 48)
+        HStack(spacing: 0) {
+            Button(action: open) {
+                HStack(spacing: 13) {
+                    if entry.isDirectory {
+                        FolderTile()
+                    } else {
+                        ArtworkView(track: entry.track(root: root), size: 48)
+                    }
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(entry.isDirectory ? entry.name : cleanTitle(entry.title ?? entry.name))
+                            .font(.body.weight(.semibold))
+                            .lineLimit(1)
+                        Text(entry.isDirectory ? "Folder" : entry.artist ?? "Unknown artist")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    if !entry.isDirectory {
+                        Text(sourceLabel)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(.thinMaterial, in: Capsule())
+                    }
                 }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(entry.isDirectory ? entry.name : cleanTitle(entry.title ?? entry.name))
-                        .font(.body.weight(.semibold))
-                        .lineLimit(1)
-                    Text(entry.isDirectory ? "Folder" : entry.artist ?? "Unknown artist")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                .padding(10)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .simultaneousGesture(
+                TapGesture(count: 2).onEnded {
+                    if entry.isDirectory {
+                        open()
+                    } else {
+                        play()
+                    }
                 }
+            )
 
-                Spacer()
-
-                if !entry.isDirectory {
-                    Text(entry.source == "youtube" ? "YouTube" : root.title)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(.thinMaterial, in: Capsule())
-                }
-
-                Image(systemName: entry.isDirectory ? "chevron.right" : "play.fill")
+            if entry.isDirectory {
+                Image(systemName: "chevron.right")
                     .font(.callout.weight(.semibold))
                     .foregroundStyle(.secondary)
+                    .padding(.trailing, 10)
                     .accessibilityHidden(true)
+            } else {
+                Button(action: play) {
+                    Image(systemName: "play.fill")
+                        .font(.callout.weight(.semibold))
+                        .frame(width: 36, height: 36)
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(.secondary)
+                .contentShape(Circle())
+                .padding(.trailing, 8)
+                .accessibilityLabel("Play \(entry.title ?? entry.name)")
             }
-            .padding(10)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(LibraryRowButtonStyle())
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.gSurface.opacity(0.55))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(.white.opacity(0.08), lineWidth: 1)
+        )
         .contextMenu {
             if entry.isDirectory {
                 Button("Open Folder", action: open)
+                if let openInFinder {
+                    Button("Show in Finder", action: openInFinder)
+                }
             } else {
                 Button("Play", action: play)
                 Button("Play Next") {
                     queue()
                 }
+                if let openInFinder {
+                    Button("Show in Finder", action: openInFinder)
+                }
+                if let saveToLibrary {
+                    Button("Save to Library", action: saveToLibrary)
+                }
+                if let delete {
+                    Button("Delete", role: .destructive, action: delete)
+                }
             }
         }
         .accessibilityLabel(entry.isDirectory ? "Folder \(entry.name)" : "Track \(entry.title ?? entry.name), \(entry.artist ?? "Unknown artist")")
+    }
+
+    private var sourceLabel: String {
+        switch entry.source {
+        case "youtube":
+            return "YouTube"
+        case "soundcloud":
+            return "SoundCloud"
+        default:
+            return root.title
+        }
     }
 }
 

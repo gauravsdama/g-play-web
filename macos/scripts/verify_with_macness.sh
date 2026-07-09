@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-APP_BUNDLE="$ROOT_DIR/.build/macos/G Play.app"
+APP_BUNDLE="$ROOT_DIR/.build/macos/vantabeat.app"
 MACNESS_BIN="${MACNESS_BIN:-/Users/gauravsdama/git/macness/.build/release/macness}"
 
 if [[ ! -x "$MACNESS_BIN" ]]; then
@@ -15,7 +15,7 @@ fi
 
 "$MACNESS_BIN" launch --app "$APP_BUNDLE" --fresh --wait 7
 "$MACNESS_BIN" verify \
-  --bundle-id com.gauravsdama.gplay \
-  --expect-window "G Play" \
-  --label gplay-native \
+  --bundle-id com.gauravsdama.vantabeat \
+  --expect-window "vantabeat" \
+  --label vantabeat-native \
   --no-screenshot

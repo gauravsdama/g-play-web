@@ -1,7 +1,7 @@
 services:
-  gplay:
+  vantabeat:
     environment:
-      - GPLAY_YTDLP_COOKIES=/app/cookies.txt
+      - VANTABEAT_YTDLP_COOKIES=/app/cookies.txt
     volumes:
       - type: bind
         source: ./cookies.txt

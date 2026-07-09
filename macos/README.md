@@ -1,13 +1,14 @@
-# G Play for macOS
+# vantabeat for macOS
 
-This folder packages G Play as a native SwiftUI macOS app backed by the local FastAPI audio engine.
+This folder packages vantabeat as a native SwiftUI macOS app backed by a bundled local Python media engine.
 
 The current architecture is:
 
 - SwiftUI app shell
-- native SwiftUI navigation, library, player, download, playlist, tuning, and visualizer views
-- bundled FastAPI backend launched as a child process
-- user data stored in `~/Library/Application Support/G Play`
+- native SwiftUI navigation, library, player, imports, playlists, EQ, and visualiser views
+- bundled Python media engine launched as a child process
+- per-launch local API token shared only between Swift and the child process
+- user data stored in `~/Library/Application Support/vantabeat`
 
 ## Build
 
@@ -19,13 +20,19 @@ cd /Users/gauravsdama/git/mediaplayerAPP/g-play-web
 The app bundle is written to:
 
 ```sh
-/Users/gauravsdama/git/mediaplayerAPP/g-play-web/.build/macos/G Play.app
+/Users/gauravsdama/git/mediaplayerAPP/g-play-web/.build/macos/vantabeat.app
+```
+
+To opt into repo-local runtime folders while developing, build with:
+
+```sh
+VANTABEAT_DEV_DATA_ROOT=1 ./macos/scripts/build_app.sh
 ```
 
 ## Run
 
 ```sh
-open "/Users/gauravsdama/git/mediaplayerAPP/g-play-web/.build/macos/G Play.app"
+open "/Users/gauravsdama/git/mediaplayerAPP/g-play-web/.build/macos/vantabeat.app"
 ```
 
 ## Verify With macness
@@ -45,9 +52,9 @@ The bundled smoke check intentionally avoids screenshot and accessibility assert
 
 ```sh
 /Users/gauravsdama/git/macness/.build/release/macness verify \
-  --bundle-id com.gauravsdama.gplay \
-  --expect-window "G Play" \
-  --expect-text "G Play"
+  --bundle-id com.gauravsdama.vantabeat \
+  --expect-window "vantabeat" \
+  --expect-text "vantabeat"
 ```
 
 For full screenshots and accessibility assertions, grant the terminal Accessibility and Screen Recording access:
@@ -58,10 +65,12 @@ For full screenshots and accessibility assertions, grant the terminal Accessibil
 
 ## Runtime Notes
 
-The native app uses its own data folder:
+The app uses its own data folder:
 
 ```sh
-~/Library/Application Support/G Play
+~/Library/Application Support/vantabeat
 ```
 
-Put a `cookies.txt` file in that folder if you want `yt-dlp` to use browser cookies for downloads.
+Put a `cookies.txt` file in that folder if you want `yt-dlp` to use browser cookies for imports.
+
+Supported local audio containers include `.aac`, `.m4a`, `.mp3`, `.flac`, `.wav`, `.ogg`, `.opus`, and `.webm`.

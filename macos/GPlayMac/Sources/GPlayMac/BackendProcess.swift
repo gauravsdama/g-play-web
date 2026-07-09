@@ -4,6 +4,7 @@ import Foundation
 struct BackendLaunch {
     let baseURL: URL
     let dataRootURL: URL
+    let apiToken: String
 }
 
 enum BackendError: LocalizedError {
@@ -15,13 +16,13 @@ enum BackendError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingResources(let url):
-            return "Missing backend resources at \(url.path). Rebuild the app bundle."
+            return "Missing media engine resources at \(url.path). Rebuild the app bundle."
         case .missingPython(let url):
             return "Missing bundled Python at \(url.path). Rebuild the app bundle."
         case .noFreePort:
-            return "No free local port was available for the G Play backend."
+            return "No free local port was available for the vantabeat media engine."
         case .healthCheckTimedOut:
-            return "The G Play backend did not become ready in time."
+            return "The vantabeat media engine did not become ready in time."
         }
     }
 }
@@ -49,9 +50,11 @@ final class BackendProcess {
         }
 
         let port = try findPort(startingAt: 9137)
-        let dataRootURL = try prepareDataRoot()
+        let dataRootURL = try prepareDataRoot(resourcesURL: resourcesURL)
+        let apiToken = UUID().uuidString.replacingOccurrences(of: "-", with: "")
+            + UUID().uuidString.replacingOccurrences(of: "-", with: "")
         let logsURL = dataRootURL.appendingPathComponent("logs", isDirectory: true)
-        let logURL = logsURL.appendingPathComponent("gplay-backend-process.log")
+        let logURL = logsURL.appendingPathComponent("vantabeat-engine-process.log")
         FileManager.default.createFile(atPath: logURL.path, contents: nil)
         let handle = try FileHandle(forWritingTo: logURL)
 
@@ -70,7 +73,8 @@ final class BackendProcess {
         process.environment = backendEnvironment(
             resourcesURL: resourcesURL,
             dataRootURL: dataRootURL,
-            port: port
+            port: port,
+            apiToken: apiToken
         )
 
         try process.run()
@@ -80,7 +84,8 @@ final class BackendProcess {
 
         return BackendLaunch(
             baseURL: URL(string: "http://127.0.0.1:\(port)")!,
-            dataRootURL: dataRootURL
+            dataRootURL: dataRootURL,
+            apiToken: apiToken
         )
     }
 
@@ -99,12 +104,22 @@ final class BackendProcess {
         try? logHandle?.close()
     }
 
-    private func prepareDataRoot() throws -> URL {
+    private func prepareDataRoot(resourcesURL: URL) throws -> URL {
+        if let projectRootURL = developmentProjectRoot(resourcesURL: resourcesURL) {
+            for child in ["library", "edited", "playlists", "logs"] {
+                try FileManager.default.createDirectory(
+                    at: projectRootURL.appendingPathComponent(child, isDirectory: true),
+                    withIntermediateDirectories: true
+                )
+            }
+            return projectRootURL
+        }
+
         let appSupport = FileManager.default.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
         )[0]
-        let dataRootURL = appSupport.appendingPathComponent("G Play", isDirectory: true)
+        let dataRootURL = appSupport.appendingPathComponent("vantabeat", isDirectory: true)
         for child in ["library", "edited", "playlists", "logs"] {
             try FileManager.default.createDirectory(
                 at: dataRootURL.appendingPathComponent(child, isDirectory: true),
@@ -114,7 +129,25 @@ final class BackendProcess {
         return dataRootURL
     }
 
-    private func backendEnvironment(resourcesURL: URL, dataRootURL: URL, port: Int) -> [String: String] {
+    private func developmentProjectRoot(resourcesURL: URL) -> URL? {
+        let markerURL = resourcesURL.appendingPathComponent("vantabeat-project-root.txt")
+        guard
+            let contents = try? String(contentsOf: markerURL, encoding: .utf8)
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+            !contents.isEmpty
+        else {
+            return nil
+        }
+
+        let projectRootURL = URL(fileURLWithPath: contents, isDirectory: true)
+        let backendURL = projectRootURL.appendingPathComponent("backend/app/main.py")
+        guard FileManager.default.fileExists(atPath: backendURL.path) else {
+            return nil
+        }
+        return projectRootURL
+    }
+
+    private func backendEnvironment(resourcesURL: URL, dataRootURL: URL, port: Int, apiToken: String) -> [String: String] {
         var environment = ProcessInfo.processInfo.environment
         environment["PATH"] = [
             "/opt/homebrew/bin",
@@ -128,14 +161,15 @@ final class BackendProcess {
         environment["PORT"] = "\(port)"
         environment["PYTHONPATH"] = resourcesURL.path
         environment["PYTHONUNBUFFERED"] = "1"
-        environment["GPLAY_LIBRARY_DIR"] = dataRootURL.appendingPathComponent("library").path
-        environment["GPLAY_EDITED_DIR"] = dataRootURL.appendingPathComponent("edited").path
-        environment["GPLAY_PLAYLISTS_DIR"] = dataRootURL.appendingPathComponent("playlists").path
-        environment["GPLAY_LOGS_DIR"] = dataRootURL.appendingPathComponent("logs").path
+        environment["VANTABEAT_API_TOKEN"] = apiToken
+        environment["VANTABEAT_LIBRARY_DIR"] = dataRootURL.appendingPathComponent("library").path
+        environment["VANTABEAT_EDITED_DIR"] = dataRootURL.appendingPathComponent("edited").path
+        environment["VANTABEAT_PLAYLISTS_DIR"] = dataRootURL.appendingPathComponent("playlists").path
+        environment["VANTABEAT_LOGS_DIR"] = dataRootURL.appendingPathComponent("logs").path
 
         let cookiesURL = dataRootURL.appendingPathComponent("cookies.txt")
         if FileManager.default.fileExists(atPath: cookiesURL.path) {
-            environment["GPLAY_YTDLP_COOKIES"] = cookiesURL.path
+            environment["VANTABEAT_YTDLP_COOKIES"] = cookiesURL.path
         }
 
         return environment

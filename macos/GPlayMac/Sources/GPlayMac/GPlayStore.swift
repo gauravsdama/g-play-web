@@ -13,14 +13,18 @@ final class GPlayStore: ObservableObject {
     @Published var entries: [TreeEntry] = []
     @Published var selectedTrack: Track?
     @Published var playlists: [String] = []
+    @Published var librarySort: LibrarySort = .recent
     @Published var activePlaylist: String?
     @Published var activePlaylistEntries: [TreeEntry] = []
     @Published var libraryTracks: [TreeEntry] = []
+    @Published var partyActive = false
+    @Published var partyCode: String?
+    @Published var partyQueue: [PartyItem] = []
     @Published var statusMessage: String?
     @Published var isLoading = false
 
-    init(baseURL: URL, dataRootURL: URL?) {
-        self.api = GPlayAPI(baseURL: baseURL)
+    init(baseURL: URL, apiToken: String, dataRootURL: URL?) {
+        self.api = GPlayAPI(baseURL: baseURL, apiToken: apiToken)
         self.player = PlayerController(api: self.api)
         self.dataRootURL = dataRootURL
     }
@@ -99,21 +103,52 @@ final class GPlayStore: ObservableObject {
     func download(url: String, playlist: String?, quality: Int) async {
         let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            statusMessage = "Paste a YouTube URL first."
+            statusMessage = "Paste a YouTube or SoundCloud URL first."
             return
         }
         isLoading = true
-        statusMessage = "Downloading..."
+        statusMessage = "Importing..."
         defer { isLoading = false }
         do {
             let track = try await api.download(url: trimmed, playlist: playlist?.isEmpty == false ? playlist : nil, quality: quality)
             selectedTrack = track
             player.play(track)
-            statusMessage = "Downloaded \(track.displayTitle)."
+            statusMessage = "Imported \(track.displayTitle)."
             await reloadAll()
         } catch {
             statusMessage = error.localizedDescription
         }
+    }
+
+    func importFiles(_ urls: [URL]) async {
+        guard !urls.isEmpty else {
+            return
+        }
+        isLoading = true
+        statusMessage = "Importing local audio..."
+        defer { isLoading = false }
+
+        var imported: [Track] = []
+        var failures = 0
+        for url in urls {
+            do {
+                let track = try await api.uploadAudio(fileURL: url, root: .library)
+                imported.append(track)
+            } catch {
+                failures += 1
+                statusMessage = error.localizedDescription
+            }
+        }
+
+        if let last = imported.last {
+            selectedTrack = last
+        }
+        if failures > 0 {
+            statusMessage = "Imported \(imported.count), failed \(failures)."
+        } else {
+            statusMessage = "Imported \(imported.count) local \(imported.count == 1 ? "track" : "tracks")."
+        }
+        await reloadAll()
     }
 
     func createPlaylist(_ name: String) async {
@@ -149,13 +184,76 @@ final class GPlayStore: ObservableObject {
             statusMessage = "Select a track and playlist first."
             return
         }
+        await addToPlaylist(activePlaylist, track: track)
+    }
+
+    func addToPlaylist(_ playlist: String, track: Track) async {
         do {
-            try await api.addToPlaylist(activePlaylist, track: track)
-            statusMessage = "Added to \(activePlaylist)."
-            await openPlaylist(activePlaylist)
+            try await api.addToPlaylist(playlist, track: track)
+            statusMessage = "Added to \(playlist)."
+            if activePlaylist == playlist {
+                await openPlaylist(playlist)
+            }
+            await loadPlaylists()
         } catch {
             statusMessage = error.localizedDescription
         }
+    }
+
+    func playActivePlaylist() {
+        let tracks = activePlaylistEntries
+            .filter { !$0.isDirectory }
+            .map { $0.track(root: .playlists) }
+        guard let first = tracks.first else {
+            statusMessage = "Select a playlist with tracks first."
+            return
+        }
+        player.clearQueue()
+        tracks.dropFirst().forEach { player.addToQueue($0) }
+        play(first)
+        statusMessage = "Queued \(tracks.count) \(tracks.count == 1 ? "track" : "tracks")."
+    }
+
+    func addActivePlaylistToQueue() {
+        let tracks = activePlaylistEntries
+            .filter { !$0.isDirectory }
+            .map { $0.track(root: .playlists) }
+        guard !tracks.isEmpty else {
+            statusMessage = "Select a playlist with tracks first."
+            return
+        }
+        tracks.forEach { player.addToQueue($0) }
+        statusMessage = "Added \(tracks.count) to Up Next."
+    }
+
+    func applyPresetToActivePlaylist(_ preset: TunePreset) async {
+        let tracks = activePlaylistEntries
+            .filter { !$0.isDirectory }
+            .map { $0.track(root: .playlists) }
+        guard !tracks.isEmpty else {
+            statusMessage = "Select a playlist with tracks first."
+            return
+        }
+
+        isLoading = true
+        statusMessage = "Rendering \(preset.id) for playlist..."
+        defer { isLoading = false }
+
+        var successCount = 0
+        var failCount = 0
+        for track in tracks {
+            do {
+                _ = try await api.tune(track: track, preset: preset)
+                successCount += 1
+            } catch {
+                failCount += 1
+            }
+        }
+        statusMessage = failCount > 0
+            ? "Rendered \(successCount), skipped \(failCount)."
+            : "Rendered \(successCount) playlist \(successCount == 1 ? "track" : "tracks")."
+        selectedRoot = .edited
+        await reloadAll()
     }
 
     func applyPreset(_ preset: TunePreset) async {
@@ -172,7 +270,154 @@ final class GPlayStore: ObservableObject {
             player.play(tuned)
             selectedRoot = .edited
             currentPath = ""
-            statusMessage = "Rendered \(preset.id) to Edited."
+            statusMessage = "Rendered \(preset.id) to Rendered Tracks."
+            await reloadAll()
+        } catch {
+            statusMessage = error.localizedDescription
+        }
+    }
+
+    func applyCut(start: Double, end: Double) async {
+        guard let track = selectedTrack else {
+            statusMessage = "Select a track before trimming."
+            return
+        }
+        guard end > start else {
+            statusMessage = "Cut end must be after cut start."
+            return
+        }
+
+        isLoading = true
+        statusMessage = "Rendering cut..."
+        defer { isLoading = false }
+        do {
+            let edited = try await api.applyCuts(track: track, cuts: [CutRange(start: start, end: end)])
+            selectedTrack = edited
+            player.play(edited)
+            selectedRoot = .edited
+            currentPath = ""
+            statusMessage = "Cut saved to Rendered Tracks."
+            await reloadAll()
+        } catch {
+            statusMessage = error.localizedDescription
+        }
+    }
+
+    func rename(track: Track, newName: String) async {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            statusMessage = "Name cannot be empty."
+            return
+        }
+        do {
+            let renamed = try await api.rename(track: track, newName: trimmed)
+            if selectedTrack?.id == track.id {
+                selectedTrack = renamed
+            }
+            if player.currentTrack?.id == track.id {
+                player.play(renamed)
+            }
+            statusMessage = "Renamed to \(renamed.fileName)."
+            await reloadAll()
+        } catch {
+            statusMessage = error.localizedDescription
+        }
+    }
+
+    func saveToLibrary(track: Track) async {
+        do {
+            let saved = try await api.saveToLibrary(track: track)
+            if selectedTrack?.id == track.id {
+                selectedTrack = saved
+            }
+            if player.currentTrack?.id == track.id {
+                player.play(saved)
+            }
+            statusMessage = "Saved to Local Library."
+            await reloadAll()
+        } catch {
+            statusMessage = error.localizedDescription
+        }
+    }
+
+    func delete(track: Track) async {
+        do {
+            try await api.delete(track: track)
+            if selectedTrack?.id == track.id {
+                selectedTrack = nil
+            }
+            if player.currentTrack?.id == track.id {
+                player.stop()
+            }
+            statusMessage = "Deleted \(track.fileName)."
+            await reloadAll()
+        } catch {
+            statusMessage = error.localizedDescription
+        }
+    }
+
+    func openFolder(root: RootName, path: String?) async {
+        do {
+            try await api.openFolder(root: root, path: path)
+        } catch {
+            statusMessage = error.localizedDescription
+        }
+    }
+
+    func startParty() async {
+        do {
+            let code = try await api.startParty().uppercased()
+            partyCode = code
+            partyActive = true
+            partyQueue = []
+            statusMessage = "Party \(code) started."
+        } catch {
+            statusMessage = error.localizedDescription
+        }
+    }
+
+    func stopParty() async {
+        do {
+            try await api.stopParty()
+            partyActive = false
+            partyCode = nil
+            partyQueue = []
+            statusMessage = "Party stopped."
+        } catch {
+            statusMessage = error.localizedDescription
+        }
+    }
+
+    func refreshPartyQueue() async {
+        guard let partyCode else {
+            return
+        }
+        do {
+            partyQueue = try await api.partyQueue(code: partyCode)
+        } catch {
+            statusMessage = error.localizedDescription
+        }
+    }
+
+    func enqueuePartyURL(_ url: String, quality: Int) async {
+        guard let partyCode else {
+            statusMessage = "Start a party first."
+            return
+        }
+        let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            statusMessage = "Paste a YouTube or SoundCloud URL first."
+            return
+        }
+
+        isLoading = true
+        statusMessage = "Importing party track..."
+        defer { isLoading = false }
+        do {
+            let item = try await api.partyEnqueue(code: partyCode, url: trimmed, quality: quality)
+            partyQueue.append(item)
+            player.addToQueue(item.track)
+            statusMessage = "Added \(item.track.displayTitle) to Up Next."
             await reloadAll()
         } catch {
             statusMessage = error.localizedDescription

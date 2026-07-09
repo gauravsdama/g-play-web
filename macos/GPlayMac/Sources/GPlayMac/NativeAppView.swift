@@ -3,8 +3,8 @@ import SwiftUI
 struct NativeAppView: View {
     @StateObject private var store: GPlayStore
 
-    init(baseURL: URL, dataRootURL: URL?) {
-        _store = StateObject(wrappedValue: GPlayStore(baseURL: baseURL, dataRootURL: dataRootURL))
+    init(baseURL: URL, apiToken: String, dataRootURL: URL?) {
+        _store = StateObject(wrappedValue: GPlayStore(baseURL: baseURL, apiToken: apiToken, dataRootURL: dataRootURL))
     }
 
     var body: some View {
@@ -18,7 +18,11 @@ struct NativeAppView: View {
             await store.start()
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            PlayerBar(player: store.player) {
+            PlayerBar(player: store.player, selectedTrack: store.selectedTrack) {
+                if let track = store.selectedTrack {
+                    store.play(track)
+                }
+            } openNowPlaying: {
                 store.selectedSection = .nowPlaying
             }
         }
@@ -42,7 +46,7 @@ struct AppSidebar: View {
                 .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("G Play")
+                    Text("vantabeat")
                         .font(.title3.weight(.semibold))
                     Text("Local music studio")
                         .font(.caption)
@@ -134,6 +138,8 @@ struct MainSurface: View {
                         DownloadNativeView(store: store)
                     case .playlists:
                         PlaylistsNativeView(store: store)
+                    case .party:
+                        PartyNativeView(store: store)
                     case .tuning:
                         TuningNativeView(store: store)
                     case .visualizer:
@@ -190,13 +196,15 @@ struct HeaderView: View {
         case .nowPlaying:
             return store.player.currentTrack?.displayTitle ?? "Select a track from Library"
         case .download:
-            return "Pull YouTube audio into your local library"
+            return "Import audio into your local library"
         case .playlists:
             return "Organize local tracks without syncing them anywhere"
+        case .party:
+            return "Build a shared Up Next queue on this Mac"
         case .tuning:
-            return "Render presets into Edited for A/B listening"
+            return "Render EQ presets into versioned local tracks"
         case .visualizer:
-            return "Native playback canvas"
+            return "Native reactive playback canvas"
         }
     }
 }
