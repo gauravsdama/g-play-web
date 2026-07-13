@@ -2,7 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct DownloadNativeView: View {
-    @ObservedObject var store: GPlayStore
+    @ObservedObject var store: VantabeatStore
     @State private var url = ""
     @State private var quality = 320
     @State private var playlist = ""
@@ -87,7 +87,7 @@ struct DownloadNativeView: View {
 }
 
 struct PlaylistsNativeView: View {
-    @ObservedObject var store: GPlayStore
+    @ObservedObject var store: VantabeatStore
     @State private var newPlaylist = ""
     @State private var playlistPreset = TunePreset.all[0]
 
@@ -221,7 +221,7 @@ struct PlaylistsNativeView: View {
 }
 
 struct TuningNativeView: View {
-    @ObservedObject var store: GPlayStore
+    @ObservedObject var store: VantabeatStore
     @ObservedObject private var player: PlayerController
     @State private var selectedPreset = TunePreset.all[0]
     @State private var eqGains = TunePreset.all[0].eq
@@ -235,7 +235,7 @@ struct TuningNativeView: View {
     private let drcModes = ["Off", "Soft", "Medium", "High"]
     private let eqColumns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 5)
 
-    init(store: GPlayStore) {
+    init(store: VantabeatStore) {
         self.store = store
         self.player = store.player
     }
@@ -494,7 +494,7 @@ struct TuningNativeView: View {
 }
 
 struct PartyNativeView: View {
-    @ObservedObject var store: GPlayStore
+    @ObservedObject var store: VantabeatStore
     @State private var url = ""
     @State private var quality = 320
 

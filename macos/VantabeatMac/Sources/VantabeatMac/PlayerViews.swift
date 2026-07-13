@@ -101,12 +101,12 @@ struct PlayerBar: View {
 }
 
 struct NowPlayingNativeView: View {
-    @ObservedObject var store: GPlayStore
+    @ObservedObject var store: VantabeatStore
     @ObservedObject private var player: PlayerController
     @State private var renameValue = ""
     @State private var playlistTarget = ""
 
-    init(store: GPlayStore) {
+    init(store: VantabeatStore) {
         self.store = store
         self.player = store.player
     }

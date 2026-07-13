@@ -2,12 +2,12 @@
 
 ## What this codebase does
 
-vantabeat is a local-only macOS music app. A native SwiftUI shell in `macos/GPlayMac/Sources/GPlayMac` launches a bundled Python FastAPI media engine from `backend/app` as a private child process on `127.0.0.1`, then uses that loopback API for library browsing, local file import, YouTube/SoundCloud downloads, playback file URLs, playlists, EQ rendering, trimming, artwork, and a local "party" queue. The release bundle is assembled by `macos/scripts/build_app.sh` into `.build/macos/vantabeat.app`; runtime user data lives under `~/Library/Application Support/vantabeat`.
+vantabeat is a local-only macOS music app. A native AppKit-hosted SwiftUI shell in `macos/VantabeatMac/Sources/VantabeatMac` launches a bundled Python FastAPI media engine from `backend/app` as a private child process on `127.0.0.1`, then uses that loopback API for library browsing, local file import, YouTube/SoundCloud downloads, playback file URLs, playlists, EQ rendering, trimming, artwork, and a local "party" queue. The release bundle is assembled by `macos/scripts/build_app.sh` into `.build/macos/vantabeat.app`; runtime user data lives under `~/Library/Application Support/vantabeat`.
 
 ## Auth shape
 
 - `BackendProcess.backendEnvironment` generates and passes `VANTABEAT_API_TOKEN` to the Python engine on each launch.
-- `GPlayAPI.tokenHeader` is the Swift client header name for private API calls.
+- `VantabeatAPI.tokenHeader` is the Swift client header name for private API calls.
 - `local_engine_middleware` protects every route except `PUBLIC_PATHS`.
 - `request_token` accepts the token only from the private header; query-string tokens are intentionally rejected.
 - `safe_root`, `safe_resolve`, and `rel_to_root` are the path confinement primitives for library, edited, and playlists roots.

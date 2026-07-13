@@ -2,8 +2,8 @@ import AppKit
 import Foundation
 
 @MainActor
-final class GPlayStore: ObservableObject {
-    let api: GPlayAPI
+final class VantabeatStore: ObservableObject {
+    let api: VantabeatAPI
     let player: PlayerController
     let dataRootURL: URL?
 
@@ -24,7 +24,7 @@ final class GPlayStore: ObservableObject {
     @Published var isLoading = false
 
     init(baseURL: URL, apiToken: String, dataRootURL: URL?) {
-        self.api = GPlayAPI(baseURL: baseURL, apiToken: apiToken)
+        self.api = VantabeatAPI(baseURL: baseURL, apiToken: apiToken)
         self.player = PlayerController(api: self.api)
         self.dataRootURL = dataRootURL
     }

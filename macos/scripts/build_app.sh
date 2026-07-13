@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 MACOS_DIR="$ROOT_DIR/macos"
-SWIFT_PACKAGE_DIR="$MACOS_DIR/GPlayMac"
+SWIFT_PACKAGE_DIR="$MACOS_DIR/VantabeatMac"
 ASSETS_DIR="$MACOS_DIR/Assets"
 APP_BUILD_DIR="$ROOT_DIR/.build/macos"
 APP_BUNDLE="$APP_BUILD_DIR/vantabeat.app"
@@ -29,7 +29,7 @@ swift build -c release --package-path "$SWIFT_PACKAGE_DIR"
 echo "==> Assembling app bundle"
 rm -rf "$APP_BUNDLE"
 mkdir -p "$CONTENTS_DIR/MacOS" "$RESOURCES_DIR"
-cp "$SWIFT_PACKAGE_DIR/.build/release/GPlayMac" "$CONTENTS_DIR/MacOS/vantabeat"
+cp "$SWIFT_PACKAGE_DIR/.build/release/VantabeatMac" "$CONTENTS_DIR/MacOS/vantabeat"
 cp "$MACOS_DIR/Info.plist" "$CONTENTS_DIR/Info.plist"
 cp "$ASSETS_DIR/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
 

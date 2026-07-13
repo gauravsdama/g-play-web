@@ -10,11 +10,11 @@ final class PlayerController: ObservableObject {
     @Published var queue: [Track] = []
     @Published var history: [Track] = []
 
-    private let api: GPlayAPI
+    private let api: VantabeatAPI
     private let player = AVPlayer()
     private var timer: Timer?
 
-    init(api: GPlayAPI) {
+    init(api: VantabeatAPI) {
         self.api = api
         timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             Task { @MainActor in

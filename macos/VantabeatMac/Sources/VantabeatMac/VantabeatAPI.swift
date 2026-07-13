@@ -1,6 +1,6 @@
 import Foundation
 
-struct GPlayAPI {
+struct VantabeatAPI {
     let baseURL: URL
     let apiToken: String
 

@@ -3,16 +3,16 @@
 import PackageDescription
 
 let package = Package(
-    name: "GPlayMac",
+    name: "VantabeatMac",
     platforms: [
         .macOS(.v13),
     ],
     products: [
-        .executable(name: "GPlayMac", targets: ["GPlayMac"]),
+        .executable(name: "VantabeatMac", targets: ["VantabeatMac"]),
     ],
     targets: [
         .executableTarget(
-            name: "GPlayMac",
+            name: "VantabeatMac",
             linkerSettings: [
                 .linkedFramework("AppKit"),
                 .linkedFramework("AVFoundation"),

@@ -1,10 +1,10 @@
 import SwiftUI
 
 struct NativeAppView: View {
-    @StateObject private var store: GPlayStore
+    @StateObject private var store: VantabeatStore
 
     init(baseURL: URL, apiToken: String, dataRootURL: URL?) {
-        _store = StateObject(wrappedValue: GPlayStore(baseURL: baseURL, apiToken: apiToken, dataRootURL: dataRootURL))
+        _store = StateObject(wrappedValue: VantabeatStore(baseURL: baseURL, apiToken: apiToken, dataRootURL: dataRootURL))
     }
 
     var body: some View {
@@ -30,7 +30,7 @@ struct NativeAppView: View {
 }
 
 struct AppSidebar: View {
-    @ObservedObject var store: GPlayStore
+    @ObservedObject var store: VantabeatStore
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -119,7 +119,7 @@ struct AppSidebar: View {
 }
 
 struct MainSurface: View {
-    @ObservedObject var store: GPlayStore
+    @ObservedObject var store: VantabeatStore
 
     var body: some View {
         ZStack {
@@ -156,7 +156,7 @@ struct MainSurface: View {
 }
 
 struct HeaderView: View {
-    @ObservedObject var store: GPlayStore
+    @ObservedObject var store: VantabeatStore
 
     var body: some View {
         HStack(alignment: .center, spacing: 16) {

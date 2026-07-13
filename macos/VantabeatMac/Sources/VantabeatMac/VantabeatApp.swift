@@ -2,33 +2,87 @@ import AppKit
 import SwiftUI
 
 @main
-struct GPlayApp: App {
-    @StateObject private var model = AppModel()
+struct VantabeatApp: App {
+    @NSApplicationDelegateAdaptor(VantabeatAppDelegate.self) private var appDelegate
 
     var body: some Scene {
-        WindowGroup("vantabeat") {
-            RootView()
-                .environmentObject(model)
-                .task {
-                    await model.start()
-                }
+        Settings {
+            EmptyView()
         }
-        .windowStyle(.titleBar)
         .commands {
             CommandGroup(after: .appInfo) {
                 Button("Open vantabeat Data Folder") {
-                    model.openDataFolder()
+                    VantabeatRuntime.shared.model.openDataFolder()
                 }
                 .keyboardShortcut("o", modifiers: [.command, .shift])
 
                 Button("Restart Backend") {
                     Task {
-                        await model.restart()
+                        await VantabeatRuntime.shared.model.restart()
                     }
                 }
                 .keyboardShortcut("r", modifiers: [.command, .shift])
             }
         }
+    }
+}
+
+@MainActor
+final class VantabeatRuntime {
+    static let shared = VantabeatRuntime()
+
+    let model = AppModel()
+
+    private init() {}
+}
+
+@MainActor
+final class VantabeatAppDelegate: NSObject, NSApplicationDelegate {
+    private let runtime = VantabeatRuntime.shared
+    private var mainWindow: NSWindow?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        showMainWindow()
+        Task {
+            await runtime.model.start()
+        }
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag {
+            showMainWindow()
+        }
+        return true
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        runtime.model.shutdown()
+    }
+
+    private func showMainWindow() {
+        let window = mainWindow ?? makeMainWindow()
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func makeMainWindow() -> NSWindow {
+        let controller = NSHostingController(
+            rootView: RootView()
+                .environmentObject(runtime.model)
+        )
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 1180, height: 760),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "vantabeat"
+        window.contentViewController = controller
+        window.isReleasedWhenClosed = false
+        window.setFrameAutosaveName("vantabeat-main-window")
+        window.center()
+        mainWindow = window
+        return window
     }
 }
 

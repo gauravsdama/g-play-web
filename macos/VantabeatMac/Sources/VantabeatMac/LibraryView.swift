@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct LibraryView: View {
-    @ObservedObject var store: GPlayStore
+    @ObservedObject var store: VantabeatStore
 
     private var sortedEntries: [TreeEntry] {
         store.entries.sorted { left, right in
@@ -90,7 +90,7 @@ struct LibraryView: View {
 }
 
 struct RootPicker: View {
-    @ObservedObject var store: GPlayStore
+    @ObservedObject var store: VantabeatStore
 
     var body: some View {
         HStack(spacing: 8) {
@@ -110,7 +110,7 @@ struct RootPicker: View {
 }
 
 struct Breadcrumbs: View {
-    @ObservedObject var store: GPlayStore
+    @ObservedObject var store: VantabeatStore
 
     var body: some View {
         HStack(spacing: 6) {
