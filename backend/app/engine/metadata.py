@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from urllib.error import URLError
+from urllib.parse import urlparse
 from urllib.request import Request as UrlRequest, urlopen
 
 from .config import AUDIO_EXTENSIONS
@@ -210,10 +211,15 @@ def download_artwork(info: Dict[str, Any], audio_path: Path) -> Optional[Path]:
     thumbnail_url = best_thumbnail_url(info)
     if not thumbnail_url:
         return None
+    parsed = urlparse(thumbnail_url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        log_error("artwork_url_rejected", url=thumbnail_url)
+        return None
 
     request = UrlRequest(thumbnail_url, headers={"User-Agent": "vantabeat/1.0"})
     try:
-        with urlopen(request, timeout=20) as response:
+        # Scheme is restricted before opening the URL.
+        with urlopen(request, timeout=20) as response:  # nosec B310
             content_type = response.headers.get("content-type")
             artwork = response.read(MAX_ARTWORK_BYTES + 1)
     except (OSError, URLError) as exc:

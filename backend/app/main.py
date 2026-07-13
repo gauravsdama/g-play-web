@@ -6,6 +6,7 @@ import shutil
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
@@ -26,12 +27,12 @@ from .engine.config import (
     AUDIO_EXTENSIONS,
     EDITS_DIR,
     LIBRARY_DIR,
+    MAX_UPLOAD_BYTES,
     PLAYLISTS_DIR,
     YTDLP_COOKIES,
     ensure_runtime_dirs,
 )
 from .engine.downloads import (
-    is_soundcloud_url,
     log_available_formats,
     log_format_list_cli,
     run_download,
@@ -87,11 +88,43 @@ ensure_runtime_dirs()
 app = FastAPI(title=f"{APP_NAME} Local Media Engine")
 
 PUBLIC_PATHS = {"/api/health"}
-TOKEN_HEADER = "x-vantabeat-token"
+# Header name only; the per-launch token value comes from VANTABEAT_API_TOKEN.
+TOKEN_HEADER = "x-vantabeat-token"  # nosec B105
+SUPPORTED_DOWNLOAD_HOSTS = {
+    "soundcloud": ("soundcloud.com",),
+    "youtube": ("youtube.com", "youtu.be"),
+}
 
 
 def request_token(request: Request) -> Optional[str]:
-    return request.headers.get(TOKEN_HEADER) or request.query_params.get("token")
+    return request.headers.get(TOKEN_HEADER)
+
+
+def supported_host(host: str, allowed_roots: tuple[str, ...]) -> bool:
+    return any(host == root or host.endswith(f".{root}") for root in allowed_roots)
+
+
+def validate_media_url(url: str) -> str:
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").lower()
+    if parsed.scheme not in {"http", "https"} or not host:
+        raise HTTPException(status_code=400, detail="Use a YouTube or SoundCloud URL.")
+    for source, allowed_roots in SUPPORTED_DOWNLOAD_HOSTS.items():
+        if supported_host(host, allowed_roots):
+            return source
+    raise HTTPException(status_code=400, detail="Only YouTube and SoundCloud URLs are supported.")
+
+
+def copy_upload_with_limit(source: Any, dest: Path, max_bytes: int = MAX_UPLOAD_BYTES) -> None:
+    written = 0
+    with dest.open("wb") as target:
+        while chunk := source.read(1024 * 1024):
+            written += len(chunk)
+            if written > max_bytes:
+                target.close()
+                dest.unlink(missing_ok=True)
+                raise HTTPException(status_code=413, detail="Audio file is too large.")
+            target.write(chunk)
 
 
 def validate_private_request(request: Request) -> Optional[JSONResponse]:
@@ -200,7 +233,7 @@ async def download(req: DownloadRequest) -> Dict[str, Any]:
     if not url:
         raise HTTPException(status_code=400, detail="Missing URL")
 
-    source = "soundcloud" if is_soundcloud_url(url) else "youtube"
+    source = validate_media_url(url)
     log_event("download_start", url=url, source=source)
     formats = ["bestaudio/best"]
     attempts: List[Dict[str, Any]] = []
@@ -403,6 +436,7 @@ async def yt_info(req: InfoRequest) -> Dict[str, Any]:
     url = req.url.strip()
     if not url:
         raise HTTPException(status_code=400, detail="Missing URL")
+    validate_media_url(url)
 
     attempts = [
         {"player_clients": ["web"], "use_cookies": bool(YTDLP_COOKIES)},
@@ -516,11 +550,14 @@ async def upload_file(file: UploadFile = File(...), root: str = "Library") -> Di
         raise HTTPException(status_code=409, detail="A file with this name already exists")
     log_event("upload_start", root=root, file=file.filename)
     try:
-        with dest.open("wb") as target:
-            shutil.copyfileobj(file.file, target)
+        copy_upload_with_limit(file.file, dest)
+    except HTTPException:
+        raise
     except Exception as exc:
         log_error("upload_error", error=str(exc))
         raise HTTPException(status_code=500, detail="Upload failed")
+    finally:
+        file.file.close()
 
     meta = get_track_meta(dest)
     meta_path = dest.with_suffix(dest.suffix + ".meta.json")

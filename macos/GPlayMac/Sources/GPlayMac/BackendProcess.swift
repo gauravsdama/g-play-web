@@ -161,6 +161,7 @@ final class BackendProcess {
         environment["PORT"] = "\(port)"
         environment["PYTHONPATH"] = resourcesURL.path
         environment["PYTHONUNBUFFERED"] = "1"
+        environment["PYTHONDONTWRITEBYTECODE"] = "1"
         environment["VANTABEAT_API_TOKEN"] = apiToken
         environment["VANTABEAT_LIBRARY_DIR"] = dataRootURL.appendingPathComponent("library").path
         environment["VANTABEAT_EDITED_DIR"] = dataRootURL.appendingPathComponent("edited").path

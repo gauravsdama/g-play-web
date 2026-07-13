@@ -30,7 +30,11 @@ final class PlayerController: ObservableObject {
         currentTrack = track
         currentTime = 0
         duration = 0
-        player.replaceCurrentItem(with: AVPlayerItem(url: api.fileURL(for: track)))
+        let asset = AVURLAsset(
+            url: api.fileURL(for: track),
+            options: ["AVURLAssetHTTPHeaderFieldsKey": api.mediaRequestHeaders]
+        )
+        player.replaceCurrentItem(with: AVPlayerItem(asset: asset))
         player.play()
         isPlaying = true
     }

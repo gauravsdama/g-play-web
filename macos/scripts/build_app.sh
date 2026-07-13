@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 MACOS_DIR="$ROOT_DIR/macos"
 SWIFT_PACKAGE_DIR="$MACOS_DIR/GPlayMac"
+ASSETS_DIR="$MACOS_DIR/Assets"
 APP_BUILD_DIR="$ROOT_DIR/.build/macos"
 APP_BUNDLE="$APP_BUILD_DIR/vantabeat.app"
 CONTENTS_DIR="$APP_BUNDLE/Contents"
@@ -30,23 +31,35 @@ rm -rf "$APP_BUNDLE"
 mkdir -p "$CONTENTS_DIR/MacOS" "$RESOURCES_DIR"
 cp "$SWIFT_PACKAGE_DIR/.build/release/GPlayMac" "$CONTENTS_DIR/MacOS/vantabeat"
 cp "$MACOS_DIR/Info.plist" "$CONTENTS_DIR/Info.plist"
+cp "$ASSETS_DIR/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
 
 rsync -a --delete \
   --exclude '__pycache__' \
+  --exclude '.venv' \
+  --exclude '.pytest_cache' \
+  --exclude '*.pyc' \
+  --exclude '.DS_Store' \
   "$BACKEND_DIR/" "$RESOURCES_DIR/backend/"
+find "$RESOURCES_DIR/backend" -name '__pycache__' -type d -prune -exec rm -rf {} +
+find "$RESOURCES_DIR/backend" -name '*.pyc' -type f -delete
 
 if [[ "${VANTABEAT_DEV_DATA_ROOT:-0}" == "1" ]]; then
   printf '%s\n' "$ROOT_DIR" > "$RESOURCES_DIR/vantabeat-project-root.txt"
 fi
 
 echo "==> Creating bundled Python environment"
-"$PYTHON_BIN" -m venv "$RESOURCES_DIR/venv"
+"$PYTHON_BIN" -m venv --copies "$RESOURCES_DIR/venv"
 "$RESOURCES_DIR/venv/bin/python" -m pip install --upgrade pip
 "$RESOURCES_DIR/venv/bin/python" -m pip install -r "$BACKEND_DIR/requirements.txt"
 
 cat > "$CONTENTS_DIR/PkgInfo" <<'PKGINFO'
 APPL????
 PKGINFO
+
+if [[ "${VANTABEAT_SKIP_CODESIGN:-0}" != "1" ]] && command -v codesign >/dev/null 2>&1; then
+  echo "==> Applying ad-hoc code signature"
+  codesign --force --deep --sign - "$APP_BUNDLE"
+fi
 
 echo "Built: $APP_BUNDLE"
 echo "Run:   open '$APP_BUNDLE'"

@@ -8,12 +8,15 @@ struct GPlayAPI {
     private let encoder = JSONEncoder()
     private let tokenHeader = "X-vantabeat-Token"
 
+    var mediaRequestHeaders: [String: String] {
+        [tokenHeader: apiToken]
+    }
+
     func fetchTree(root: RootName, path: String = "") async throws -> [TreeEntry] {
         var components = URLComponents(url: baseURL.appendingPathComponent("api/tree"), resolvingAgainstBaseURL: false)!
         components.queryItems = [
             URLQueryItem(name: "root", value: root.rawValue),
             URLQueryItem(name: "path", value: path),
-            URLQueryItem(name: "token", value: apiToken),
         ]
         let response: TreeResponse = try await get(components.url!)
         return response.entries
@@ -29,7 +32,6 @@ struct GPlayAPI {
         var components = URLComponents(url: baseURL.appendingPathComponent("api/upload"), resolvingAgainstBaseURL: false)!
         components.queryItems = [
             URLQueryItem(name: "root", value: root.rawValue),
-            URLQueryItem(name: "token", value: apiToken),
         ]
 
         let boundary = "vantabeat-\(UUID().uuidString)"
@@ -140,7 +142,6 @@ struct GPlayAPI {
         components.queryItems = [
             URLQueryItem(name: "root", value: track.root.rawValue),
             URLQueryItem(name: "path", value: track.path),
-            URLQueryItem(name: "token", value: apiToken),
         ]
         return components.url!
     }
