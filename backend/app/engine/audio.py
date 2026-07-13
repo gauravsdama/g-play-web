@@ -8,7 +8,12 @@ from typing import List, Tuple
 
 import numpy as np
 
+from .config import PROCESSING_THREADS
 from .schemas import CutRange
+
+
+def ffmpeg_thread_args() -> List[str]:
+    return ["-threads", str(PROCESSING_THREADS)]
 
 
 def decode_audio_mono(path: Path, sample_rate: int) -> np.ndarray:
@@ -17,6 +22,7 @@ def decode_audio_mono(path: Path, sample_rate: int) -> np.ndarray:
         "-hide_banner",
         "-loglevel",
         "error",
+        *ffmpeg_thread_args(),
         "-i",
         str(path),
         "-vn",
@@ -102,9 +108,12 @@ def render_cut_audio(source: Path, dest: Path, segments: List[Tuple[float, float
         "-hide_banner",
         "-loglevel",
         "error",
+        *ffmpeg_thread_args(),
         "-y",
         "-i",
         str(source),
+        "-filter_threads",
+        str(PROCESSING_THREADS),
         "-filter_complex",
         filter_chain,
         "-map",
@@ -117,6 +126,7 @@ def render_cut_audio(source: Path, dest: Path, segments: List[Tuple[float, float
         "libmp3lame",
         "-b:a",
         "320k",
+        *ffmpeg_thread_args(),
         str(dest),
     ]
     proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -228,9 +238,12 @@ def process_audio(input_path: Path, output_path: Path, filter_chain: str) -> Non
         "-hide_banner",
         "-loglevel",
         "error",
+        *ffmpeg_thread_args(),
         "-y",
         "-i",
         str(input_path),
+        "-filter_threads",
+        str(PROCESSING_THREADS),
         "-af",
         filter_chain,
         "-f",
@@ -241,6 +254,7 @@ def process_audio(input_path: Path, output_path: Path, filter_chain: str) -> Non
         "libmp3lame",
         "-b:a",
         "320k",
+        *ffmpeg_thread_args(),
         str(output_path),
     ]
     proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

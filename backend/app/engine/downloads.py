@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from yt_dlp import YoutubeDL
 
-from .config import LIBRARY_DIR, YTDLP_COOKIES_FROM_BROWSER
+from .config import DOWNLOAD_FRAGMENT_WORKERS, LIBRARY_DIR, YTDLP_COOKIES_FROM_BROWSER
 from .logging_config import YtdlpLogger, log_error, log_event
 from .metadata import selected_download_path
 
@@ -26,11 +26,6 @@ CONTAINER_TIE_BREAKERS = {
     "mp3": 1,
 }
 
-
-def is_soundcloud_url(url: str) -> bool:
-    return "soundcloud.com" in url.lower()
-
-
 def build_ydl_opts(
     format_value: str,
     cookies_path: Optional[str],
@@ -45,6 +40,7 @@ def build_ydl_opts(
         "no_warnings": True,
         "retries": 3,
         "fragment_retries": 3,
+        "concurrent_fragment_downloads": DOWNLOAD_FRAGMENT_WORKERS,
         "force_ipv4": True,
         "logger": YtdlpLogger(),
     }

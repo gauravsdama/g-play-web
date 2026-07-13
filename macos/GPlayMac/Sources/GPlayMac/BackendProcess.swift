@@ -162,6 +162,12 @@ final class BackendProcess {
         environment["PYTHONPATH"] = resourcesURL.path
         environment["PYTHONUNBUFFERED"] = "1"
         environment["PYTHONDONTWRITEBYTECODE"] = "1"
+        let processingThreads = "\(max(1, ProcessInfo.processInfo.activeProcessorCount))"
+        environment["VANTABEAT_PROCESSING_THREADS"] = environment["VANTABEAT_PROCESSING_THREADS"] ?? processingThreads
+        environment["OMP_NUM_THREADS"] = environment["OMP_NUM_THREADS"] ?? processingThreads
+        environment["OPENBLAS_NUM_THREADS"] = environment["OPENBLAS_NUM_THREADS"] ?? processingThreads
+        environment["VECLIB_MAXIMUM_THREADS"] = environment["VECLIB_MAXIMUM_THREADS"] ?? processingThreads
+        environment["NUMEXPR_NUM_THREADS"] = environment["NUMEXPR_NUM_THREADS"] ?? processingThreads
         environment["VANTABEAT_API_TOKEN"] = apiToken
         environment["VANTABEAT_LIBRARY_DIR"] = dataRootURL.appendingPathComponent("library").path
         environment["VANTABEAT_EDITED_DIR"] = dataRootURL.appendingPathComponent("edited").path

@@ -13,14 +13,14 @@ The current architecture is:
 ## Build
 
 ```sh
-cd /Users/gauravsdama/git/mediaplayerAPP/g-play-web
+cd /Users/gauravsdama/git/mediaplayerAPP/vantabeat
 ./macos/scripts/build_app.sh
 ```
 
 The app bundle is written to:
 
 ```sh
-/Users/gauravsdama/git/mediaplayerAPP/g-play-web/.build/macos/vantabeat.app
+/Users/gauravsdama/git/mediaplayerAPP/vantabeat/.build/macos/vantabeat.app
 ```
 
 To opt into repo-local runtime folders while developing, build with:
@@ -32,20 +32,20 @@ VANTABEAT_DEV_DATA_ROOT=1 ./macos/scripts/build_app.sh
 ## Run
 
 ```sh
-open "/Users/gauravsdama/git/mediaplayerAPP/g-play-web/.build/macos/vantabeat.app"
+open "/Users/gauravsdama/git/mediaplayerAPP/vantabeat/.build/macos/vantabeat.app"
 ```
 
 ## Verify With macness
 
 ```sh
-cd /Users/gauravsdama/git/mediaplayerAPP/g-play-web
+cd /Users/gauravsdama/git/mediaplayerAPP/vantabeat
 ./macos/scripts/verify_with_macness.sh
 ```
 
 `macness` will launch the app, snapshot it, and write verification artifacts under:
 
 ```sh
-/Users/gauravsdama/git/mediaplayerAPP/g-play-web/.macness/runs
+/Users/gauravsdama/git/mediaplayerAPP/vantabeat/.macness/runs
 ```
 
 The bundled smoke check intentionally avoids screenshot and accessibility assertions so it can run before macOS permissions are granted. After granting permissions, use richer checks like:

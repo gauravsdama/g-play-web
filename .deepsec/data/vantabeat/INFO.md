@@ -1,4 +1,4 @@
-# g-play-web
+# vantabeat
 
 ## What this codebase does
 
@@ -9,7 +9,7 @@ vantabeat is a local-only macOS music app. A native SwiftUI shell in `macos/GPla
 - `BackendProcess.backendEnvironment` generates and passes `VANTABEAT_API_TOKEN` to the Python engine on each launch.
 - `GPlayAPI.tokenHeader` is the Swift client header name for private API calls.
 - `local_engine_middleware` protects every route except `PUBLIC_PATHS`.
-- `request_token` accepts the token from the private header and, for some media/file flows, query params.
+- `request_token` accepts the token only from the private header; query-string tokens are intentionally rejected.
 - `safe_root`, `safe_resolve`, and `rel_to_root` are the path confinement primitives for library, edited, and playlists roots.
 
 ## Threat model
@@ -21,7 +21,7 @@ The main attacker is local malware or another local user/process trying to use t
 - FastAPI route handlers in `backend/app/main.py` should rely on `local_engine_middleware`; new public paths in `PUBLIC_PATHS` need deliberate review.
 - Relative filesystem paths must go through `safe_root` + `safe_resolve`; direct joins against `LIBRARY_DIR`, `EDITS_DIR`, or `PLAYLISTS_DIR` are suspicious.
 - File-serving and playback URLs should avoid leaking the per-launch token into logs, history, crash reports, or third-party URL fetches.
-- Subprocess work should use argument arrays and bounded inputs; audio tools (`ffmpeg`, `ffprobe`, `yt-dlp`, `open`) process attacker-controlled media/URLs.
+- Subprocess work should use argument arrays and validated inputs; audio tools (`ffmpeg`, `ffprobe`, `yt-dlp`, `open`) process attacker-controlled media/URLs.
 - Bundled release scripts must avoid copying local cookies, logs, downloaded tracks, or development-only root markers into the app bundle.
 
 ## Known false-positives
@@ -29,5 +29,6 @@ The main attacker is local malware or another local user/process trying to use t
 - `/api/health` in `PUBLIC_PATHS` is intentionally unauthenticated for app startup readiness.
 - `NSAllowsLocalNetworking` in `macos/Info.plist` is required for Swift-to-loopback HTTP inside the app.
 - `BackendProcess` intentionally binds uvicorn to `127.0.0.1` and launches a bundled Python child process.
+- `generate_party_code` intentionally uses `secrets.choice` for a short local invite code; it is not custom encryption or token storage.
 - `open_folder` intentionally invokes Finder/`open` for user-selected app data folders.
 - `cookies*.txt`, `library/`, `edited/`, `playlists/`, logs, `.build/`, `.macness/`, and `.artifacts/` are local/runtime artifacts and should not be treated as source.

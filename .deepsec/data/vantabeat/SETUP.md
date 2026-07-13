@@ -1,7 +1,7 @@
-# Agent setup for `g-play-web`
+# Agent setup for `vantabeat`
 
-This is a deepsec scanning workspace. Project `g-play-web` was just registered
-(target: `..`). Setup is incomplete - `data/g-play-web/INFO.md`
+This is a deepsec scanning workspace. Project `vantabeat` was just registered
+(target: `..`). Setup is incomplete - `data/vantabeat/INFO.md`
 still has placeholder sections.
 
 ## What to do
@@ -11,7 +11,7 @@ still has placeholder sections.
    under `node_modules/deepsec/dist/docs/`. Read `getting-started.md`,
    `configuration.md`, and `writing-matchers.md` (skim the rest).
 
-2. **Fill in `data/g-play-web/INFO.md`.** It's auto-injected into the AI
+2. **Fill in `data/vantabeat/INFO.md`.** It's auto-injected into the AI
    prompt for every batch - keep it short and selective.
 
    **Length budget: 50-100 lines total.** Verbose context dilutes
@@ -48,8 +48,8 @@ still has placeholder sections.
 The user will run:
 
 ```bash
-pnpm deepsec scan    --project-id g-play-web
-pnpm deepsec process --project-id g-play-web
+pnpm deepsec scan    --project-id vantabeat
+pnpm deepsec process --project-id vantabeat
 ```
 
 You can delete this file once setup is complete.

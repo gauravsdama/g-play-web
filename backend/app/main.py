@@ -27,7 +27,6 @@ from .engine.config import (
     AUDIO_EXTENSIONS,
     EDITS_DIR,
     LIBRARY_DIR,
-    MAX_UPLOAD_BYTES,
     PLAYLISTS_DIR,
     YTDLP_COOKIES,
     ensure_runtime_dirs,
@@ -115,15 +114,9 @@ def validate_media_url(url: str) -> str:
     raise HTTPException(status_code=400, detail="Only YouTube and SoundCloud URLs are supported.")
 
 
-def copy_upload_with_limit(source: Any, dest: Path, max_bytes: int = MAX_UPLOAD_BYTES) -> None:
-    written = 0
+def copy_upload(source: Any, dest: Path) -> None:
     with dest.open("wb") as target:
         while chunk := source.read(1024 * 1024):
-            written += len(chunk)
-            if written > max_bytes:
-                target.close()
-                dest.unlink(missing_ok=True)
-                raise HTTPException(status_code=413, detail="Audio file is too large.")
             target.write(chunk)
 
 
@@ -550,10 +543,9 @@ async def upload_file(file: UploadFile = File(...), root: str = "Library") -> Di
         raise HTTPException(status_code=409, detail="A file with this name already exists")
     log_event("upload_start", root=root, file=file.filename)
     try:
-        copy_upload_with_limit(file.file, dest)
-    except HTTPException:
-        raise
+        copy_upload(file.file, dest)
     except Exception as exc:
+        dest.unlink(missing_ok=True)
         log_error("upload_error", error=str(exc))
         raise HTTPException(status_code=500, detail="Upload failed")
     finally:
