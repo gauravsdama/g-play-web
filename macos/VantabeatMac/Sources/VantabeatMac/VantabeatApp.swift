@@ -32,6 +32,7 @@ final class VantabeatRuntime {
     static let shared = VantabeatRuntime()
 
     let model = AppModel()
+    var mainWindowController: NSWindowController?
 
     private init() {}
 }
@@ -39,10 +40,12 @@ final class VantabeatRuntime {
 @MainActor
 final class VantabeatAppDelegate: NSObject, NSApplicationDelegate {
     private let runtime = VantabeatRuntime.shared
-    private var mainWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         showMainWindow()
+        DispatchQueue.main.async {
+            self.showMainWindow()
+        }
         Task {
             await runtime.model.start()
         }
@@ -55,17 +58,22 @@ final class VantabeatAppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         runtime.model.shutdown()
     }
 
     private func showMainWindow() {
-        let window = mainWindow ?? makeMainWindow()
-        window.makeKeyAndOrderFront(nil)
+        let controller = runtime.mainWindowController ?? makeMainWindowController()
+        controller.showWindow(nil)
+        controller.window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    private func makeMainWindow() -> NSWindow {
+    private func makeMainWindowController() -> NSWindowController {
         let controller = NSHostingController(
             rootView: RootView()
                 .environmentObject(runtime.model)
@@ -81,8 +89,9 @@ final class VantabeatAppDelegate: NSObject, NSApplicationDelegate {
         window.isReleasedWhenClosed = false
         window.setFrameAutosaveName("vantabeat-main-window")
         window.center()
-        mainWindow = window
-        return window
+        let windowController = NSWindowController(window: window)
+        runtime.mainWindowController = windowController
+        return windowController
     }
 }
 

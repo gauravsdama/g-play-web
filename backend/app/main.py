@@ -21,6 +21,7 @@ from .engine.audio import (
     read_duration_seconds,
     render_cut_audio,
 )
+from .engine.artwork import copy_artwork_sidecar, embed_artwork
 from .engine.config import (
     API_TOKEN,
     APP_NAME,
@@ -318,6 +319,9 @@ async def download(req: DownloadRequest) -> Dict[str, Any]:
         path = temp_path
 
     artwork_path = await run_in_threadpool(download_artwork, info, path)
+    artwork_embed_result = None
+    if artwork_path:
+        artwork_embed_result = await run_in_threadpool(embed_artwork, path, artwork_path)
     meta_path = path.with_suffix(path.suffix + ".meta.json")
     requested_downloads = info.get("requested_downloads") or []
     selected_format = (
@@ -335,6 +339,7 @@ async def download(req: DownloadRequest) -> Dict[str, Any]:
         "remixers": parts.get("remixers", []),
         "thumbnail": thumbnail,
         "artwork": str(artwork_path) if artwork_path else None,
+        "artwork_embedded": bool(artwork_embed_result.embedded) if artwork_embed_result else False,
         "source": source,
         "source_url": info.get("webpage_url") or url,
         "duration": info.get("duration"),
@@ -605,6 +610,12 @@ async def tune(req: TuneRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail="Tune failed")
 
     meta = read_full_meta(source)
+    artwork_path = await run_in_threadpool(copy_artwork_sidecar, source, output)
+    artwork_embed_result = None
+    if artwork_path:
+        artwork_embed_result = await run_in_threadpool(embed_artwork, output, artwork_path)
+        meta["artwork"] = str(artwork_path)
+        meta["artwork_embedded"] = bool(artwork_embed_result.embedded)
     meta["tuning"] = {
         "preamp_db": req.preamp_db,
         "eq_gains": req.eq_gains,
@@ -697,6 +708,12 @@ async def edit_cuts(req: EditCutsRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail="Edit failed")
 
     meta = read_full_meta(source)
+    artwork_path = await run_in_threadpool(copy_artwork_sidecar, source, output)
+    artwork_embed_result = None
+    if artwork_path:
+        artwork_embed_result = await run_in_threadpool(embed_artwork, output, artwork_path)
+        meta["artwork"] = str(artwork_path)
+        meta["artwork_embedded"] = bool(artwork_embed_result.embedded)
     meta_path = output.with_suffix(output.suffix + ".meta.json")
     try:
         meta_path.write_text(json.dumps(meta, ensure_ascii=True), encoding="utf-8")
