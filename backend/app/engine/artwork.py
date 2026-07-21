@@ -11,6 +11,7 @@ from typing import Any, Dict, Iterable, Optional
 
 from .config import AUDIO_EXTENSIONS
 from .logging_config import log_error, log_event
+from .metadata import download_artwork, read_sidecar_meta
 
 EMBEDDABLE_AUDIO_EXTENSIONS = {".flac", ".m4a", ".mp3"}
 ARTWORK_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
@@ -80,6 +81,32 @@ def copy_artwork_sidecar(source: Path, dest: Path) -> Optional[Path]:
     dest_artwork = dest.with_suffix(dest.suffix + f".artwork{artwork_path.suffix.lower()}")
     shutil.copy2(artwork_path, dest_artwork)
     return dest_artwork
+
+
+def update_meta_artwork(audio_path: Path, artwork_path: Optional[Path], embedded: bool) -> None:
+    meta_path = sidecar_meta_path(audio_path)
+    meta = read_sidecar_meta(audio_path)
+    if artwork_path:
+        meta["artwork"] = str(artwork_path)
+    meta["artwork_embedded"] = embedded
+    try:
+        meta_path.write_text(json.dumps(meta, ensure_ascii=True), encoding="utf-8")
+    except Exception as exc:
+        log_error("meta_write_failed", path=str(meta_path), error=str(exc))
+
+
+def ensure_artwork_sidecar(audio_path: Path, download_missing: bool = False) -> Optional[Path]:
+    artwork_path = find_artwork_sidecar(audio_path)
+    if artwork_path or not download_missing:
+        return artwork_path
+
+    meta = read_sidecar_meta(audio_path)
+    if not meta.get("thumbnail"):
+        return None
+    artwork_path = download_artwork(meta, audio_path)
+    if artwork_path:
+        update_meta_artwork(audio_path, artwork_path, False)
+    return artwork_path
 
 
 def has_embedded_artwork(audio_path: Path) -> bool:
@@ -176,7 +203,12 @@ def embed_artwork(audio_path: Path, artwork_path: Optional[Path] = None, force: 
     return ArtworkEmbedResult(str(audio_path), str(artwork_path), True)
 
 
-def embed_library_artwork(library_dir: Path, force: bool = True, dry_run: bool = False) -> Dict[str, Any]:
+def embed_library_artwork(
+    library_dir: Path,
+    force: bool = True,
+    dry_run: bool = False,
+    download_missing: bool = False,
+) -> Dict[str, Any]:
     results = []
     for audio_path in sorted(library_dir.rglob("*")):
         if not audio_path.is_file() or audio_path.name.startswith("."):
@@ -184,12 +216,24 @@ def embed_library_artwork(library_dir: Path, force: bool = True, dry_run: bool =
         if audio_path.suffix.lower() not in AUDIO_EXTENSIONS:
             continue
         artwork_path = find_artwork_sidecar(audio_path)
+        if not artwork_path and download_missing and dry_run:
+            meta = read_sidecar_meta(audio_path)
+            thumbnail = meta.get("thumbnail")
+            if thumbnail:
+                results.append(
+                    ArtworkEmbedResult(str(audio_path), str(thumbnail), False, "dry_run_download_missing").to_dict()
+                )
+            continue
+        if not artwork_path and download_missing:
+            artwork_path = ensure_artwork_sidecar(audio_path, download_missing=True)
         if not artwork_path:
             continue
         if dry_run:
             result = ArtworkEmbedResult(str(audio_path), str(artwork_path), False, "dry_run")
         else:
             result = embed_artwork(audio_path, artwork_path, force=force)
+            if result.embedded:
+                update_meta_artwork(audio_path, artwork_path, True)
         results.append(result.to_dict())
 
     return {
